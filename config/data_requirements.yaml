@@ -1,0 +1,109 @@
+version: 1
+project:
+  name: tradingbot
+  venue: CME futures
+  execution_broker: Tradovate
+  prop_firm: Apex Trader Funding
+  timezone_storage: UTC
+
+strategy:
+  entry_timeframes:
+    - 1m
+    - 3m
+  structure_timeframes:
+    - 15m
+    - 1h
+  timeframe_build_policy:
+    base_timeframe: 1m
+    derive_higher_timeframes_from_base: true
+    allow_direct_vendor_higher_timeframes: false
+
+instruments:
+  - symbol_root: ES
+    continuous_symbol: ES.c.0
+    tick_size: 0.25
+    tick_value_usd: 12.5
+    contract_multiplier: 50
+  - symbol_root: NQ
+    continuous_symbol: NQ.c.0
+    tick_size: 0.25
+    tick_value_usd: 5.0
+    contract_multiplier: 20
+
+historical_data:
+  provider_priority:
+    - databento
+  dataset: GLBX.MDP3
+  schema_base: ohlcv-1m
+  stype_in: continuous
+  minimum_history_months: 12
+  preferred_history_months: 36
+  partitions:
+    - symbol
+    - date
+  required_columns:
+    - ts_utc
+    - symbol
+    - contract
+    - open
+    - high
+    - low
+    - close
+    - volume
+
+session_model:
+  include_rth: true
+  include_eth: true
+  trading_day_boundary: exchange_calendar
+  require_holiday_calendar: true
+  require_early_close_calendar: true
+
+contract_roll:
+  enabled: true
+  roll_method: volume_based
+  roll_offset_days_before_expiry: null
+  series_adjustment: none
+  require_expiration_calendar: true
+
+data_quality:
+  checks:
+    missing_bars: true
+    duplicate_timestamps: true
+    out_of_order_timestamps: true
+    outlier_spike_detection: true
+    cross_timeframe_alignment: true
+  thresholds:
+    max_missing_bars_during_active_session: 0
+    max_duplicate_timestamps: 0
+    max_out_of_order_records: 0
+  fail_on_quality_error: true
+
+execution_realism:
+  commission_model:
+    mode: per_side_per_contract
+    value_usd: null
+    note: fill with your exact Apex/Tradovate fee schedule
+  exchange_fees_model:
+    mode: per_contract_round_turn
+    value_usd: null
+  slippage_model:
+    mode: fixed_ticks_by_time_of_day
+    defaults:
+      rth_ticks: 1
+      eth_ticks: 2
+
+risk_and_constraints:
+  apex_rules:
+    trailing_drawdown_mode: configure_per_account
+    daily_loss_limit_usd: null
+    max_contracts: null
+    trading_window_restrictions: []
+  backtest_enforcement:
+    reject_orders_on_rule_breach: true
+    stop_simulation_on_hard_breach: true
+
+outputs:
+  raw_data_dir: data/raw
+  curated_data_dir: data/curated
+  quality_reports_dir: reports/data_quality
+  backtest_reports_dir: reports/backtests
