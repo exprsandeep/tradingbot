@@ -62,6 +62,7 @@ def build_synthetic_row(df_3m: pd.DataFrame, df_15m: pd.DataFrame, df_1h: pd.Dat
         "h1_close": curr_1h["close"],
         "h1_close_sma_50": curr_1h["close_sma_50"],
         "h1_momentum_20": curr_1h["momentum_20"],
+        "h1_zigzag_trend": curr_1h.get("zigzag_trend", 0),
     }
     
     return pd.Series(row_data), prev_3m
@@ -116,6 +117,13 @@ def main() -> None:
         st.error(f"Failed to load V2 Mean Reversion Strategy: {e}")
         return
 
+    try:
+        cfg_v3 = yaml.safe_load(open(PROJECT_ROOT / "config" / "strategy_v3_zigzag.yaml"))
+        strat_zigzag = get_strategy(cfg_v3)
+    except Exception as e:
+        st.error(f"Failed to load V3 ZigZag Strategy: {e}")
+        return
+
     st.write(f"Monitoring **{len(symbol_prefixes)}** symbols: {', '.join(symbol_prefixes)}")
 
     # Build Scan Results
@@ -135,6 +143,7 @@ def main() -> None:
                 "15m Pos": None,
                 "Pullback Signal": "NONE",
                 "MeanRev Signal": "NONE",
+                "ZigZag Signal": "NONE",
             })
             continue
 
@@ -152,9 +161,20 @@ def main() -> None:
         elif strat_mean_rev.should_enter_short(row, prev):
             mr_signal = "SHORT"
 
+        # Evaluate ZigZag Strategy
+        zz_signal = "NONE"
+        if strat_zigzag.should_enter_long(row, prev):
+            zz_signal = "LONG"
+        elif strat_zigzag.should_enter_short(row, prev):
+            zz_signal = "SHORT"
+
         # Determine Trend context for display
         trend = "NEUTRAL"
-        if row["h1_close"] > row["h1_close_sma_50"] and row["h1_momentum_20"] > 0:
+        if row.get("h1_zigzag_trend", 0) == 1:
+            trend = "ZZ UPTREND"
+        elif row.get("h1_zigzag_trend", 0) == -1:
+            trend = "ZZ DOWNTREND"
+        elif row["h1_close"] > row["h1_close_sma_50"] and row["h1_momentum_20"] > 0:
             trend = "BULLISH"
         elif row["h1_close"] < row["h1_close_sma_50"] and row["h1_momentum_20"] < 0:
             trend = "BEARISH"
@@ -167,13 +187,14 @@ def main() -> None:
             "15m Pos": f"{row['s15_pos20']:.2f}",
             "Pullback Signal": pb_signal,
             "MeanRev Signal": mr_signal,
+            "ZigZag Signal": zz_signal,
         })
 
     df_res = pd.DataFrame(results)
 
     # Display Styled DataFrame
     st.dataframe(
-        df_res.style.applymap(highlight_signals, subset=["Pullback Signal", "MeanRev Signal"]),
+        df_res.style.applymap(highlight_signals, subset=["Pullback Signal", "MeanRev Signal", "ZigZag Signal"]),
         use_container_width=True,
         hide_index=True
     )

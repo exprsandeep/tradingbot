@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 
@@ -34,6 +35,47 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def calculate_swing_points(df: pd.DataFrame, n: int = 2) -> pd.DataFrame:
+    """Calculates N-bar fractal swing points and ZigZag trend without lookahead bias."""
+    out = df.copy()
+    
+    highs = out["high"].values
+    lows = out["low"].values
+    
+    is_swing_high = np.zeros(len(out), dtype=bool)
+    is_swing_low = np.zeros(len(out), dtype=bool)
+    
+    for i in range(n, len(out) - n):
+        window_highs = highs[i-n:i+n+1]
+        if highs[i] == np.max(window_highs) and np.sum(window_highs == highs[i]) == 1:
+            is_swing_high[i] = True
+            
+        window_lows = lows[i-n:i+n+1]
+        if lows[i] == np.min(window_lows) and np.sum(window_lows == lows[i]) == 1:
+            is_swing_low[i] = True
+
+    out["confirmed_swing_high"] = pd.Series(is_swing_high, index=out.index).shift(n).fillna(False)
+    out["confirmed_swing_low"] = pd.Series(is_swing_low, index=out.index).shift(n).fillna(False)
+    
+    out["swing_high_val"] = out["high"].shift(n).where(out["confirmed_swing_high"])
+    out["swing_low_val"] = out["low"].shift(n).where(out["confirmed_swing_low"])
+    
+    out["last_swing_high"] = out["swing_high_val"].ffill()
+    out["last_swing_low"] = out["swing_low_val"].ffill()
+    
+    out["prev_swing_high"] = out["swing_high_val"].dropna().shift(1).reindex(out.index).ffill()
+    out["prev_swing_low"] = out["swing_low_val"].dropna().shift(1).reindex(out.index).ffill()
+    
+    out["zigzag_trend"] = 0
+    uptrend = (out["last_swing_high"] > out["prev_swing_high"]) & (out["last_swing_low"] > out["prev_swing_low"])
+    downtrend = (out["last_swing_high"] < out["prev_swing_high"]) & (out["last_swing_low"] < out["prev_swing_low"])
+    
+    out.loc[uptrend, "zigzag_trend"] = 1
+    out.loc[downtrend, "zigzag_trend"] = -1
+    
+    return out
+
+
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out["bar_range"] = out["high"] - out["low"]
@@ -52,6 +94,7 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
         (out["close"] - out["ll_20"]) / (out["hh_20"] - out["ll_20"]).replace(0, pd.NA)
     ).fillna(0.5)
     out["ts_utc"] = out.index
+    out = calculate_swing_points(out, n=2)
     return out
 
 

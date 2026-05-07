@@ -80,12 +80,13 @@ def run_backtest(strategy_cfg: dict[str, Any], features_dir: str) -> tuple[pd.Da
     )
     df = pd.merge_asof(
         df.sort_values("ts"),
-        s1h[["ts", "close", "close_sma_50", "momentum_20"]]
+        s1h[["ts", "close", "close_sma_50", "momentum_20", "zigzag_trend"]]
         .rename(
             columns={
                 "close": "h1_close",
                 "close_sma_50": "h1_close_sma_50",
                 "momentum_20": "h1_momentum_20",
+                "zigzag_trend": "h1_zigzag_trend",
             }
         )
         .reset_index(drop=True)

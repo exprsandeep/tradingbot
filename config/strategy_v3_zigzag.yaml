@@ -1,0 +1,60 @@
+version: 1
+name: mnq_top_down_zigzag_v1
+status: draft_frozen_for_backtest
+
+market:
+  symbol: MNQ.c.0
+  timezone: UTC
+  entry_timeframe: 3min
+  structure_timeframes:
+    - 15min
+    - 1h
+
+sessions:
+  allowed_utc:
+    - start: "13:30"
+      end: "20:00"
+  skip_days: []
+
+entry_logic:
+  timeframe: 3min
+  min_volume_filter:
+    enabled: true
+
+risk_management:
+  tick_size: 0.25
+  stop_loss:
+    mode: fixed_ticks
+    ticks: 40
+  take_profit:
+    mode: fixed_ticks
+    ticks: 80
+  breakeven:
+    enabled: true
+    trigger_ticks: 30
+  time_stop:
+    enabled: true
+    bars_on_entry_tf: 40
+
+position_sizing:
+  contracts: 1
+  max_open_positions: 1
+  max_trades_per_day: 6
+  cooldown_bars_after_exit: 5
+
+costs:
+  commission_per_side_per_contract_usd: 1.5
+  fees_per_round_turn_per_contract_usd: 1.5
+  slippage_ticks:
+    rth: 1
+    eth: 2
+
+apex_constraints:
+  enforce_in_backtest: true
+  trailing_drawdown_mode: placeholder_configure_account
+  daily_loss_limit_usd: null
+  hard_stop_on_breach: true
+
+outputs:
+  trades_csv: reports/backtests/mnq_v3_zigzag_trades.csv
+  summary_json: reports/backtests/mnq_v3_zigzag_summary.json
