@@ -1,0 +1,94 @@
+[
+  {
+    "file": "MES_c_0_ohlcv-1m_2021-01-01T00-00-00_2026-01-01T00-00-00.parquet",
+    "symbol": "MES.c.0",
+    "rows": 1755853,
+    "start_ts_utc": "2021-01-03T23:00:00+00:00",
+    "end_ts_utc": "2025-12-31T21:59:00+00:00",
+    "duplicate_timestamps": 0,
+    "out_of_order_timestamps": 0,
+    "missing_bars_small_gaps": 65132,
+    "large_gap_segments": 301,
+    "max_gap_minutes": 4381,
+    "missing_required_columns": [
+      "contract"
+    ],
+    "alignment_3m_ok": true,
+    "alignment_15m_ok": true,
+    "alignment_1h_ok": true,
+    "passed": false,
+    "errors": [
+      "Missing required columns: ['contract']",
+      "Missing bars in small gaps 65132 > 0 (ignores gaps larger than 120 minutes)"
+    ]
+  },
+  {
+    "file": "MGC_c_0_ohlcv-1m_2021-01-01T00-00-00_2026-01-01T00-00-00.parquet",
+    "symbol": "MGC.c.0",
+    "rows": 832766,
+    "start_ts_utc": "2021-01-03T23:00:00+00:00",
+    "end_ts_utc": "2025-12-31T21:59:00+00:00",
+    "duplicate_timestamps": 0,
+    "out_of_order_timestamps": 0,
+    "missing_bars_small_gaps": 238544,
+    "large_gap_segments": 1452,
+    "max_gap_minutes": 23857,
+    "missing_required_columns": [
+      "contract"
+    ],
+    "alignment_3m_ok": true,
+    "alignment_15m_ok": true,
+    "alignment_1h_ok": true,
+    "passed": false,
+    "errors": [
+      "Missing required columns: ['contract']",
+      "Missing bars in small gaps 238544 > 0 (ignores gaps larger than 120 minutes)"
+    ]
+  },
+  {
+    "file": "MNQ_c_0_ohlcv-1m_2021-01-01T00-00-00_2026-01-01T00-00-00.parquet",
+    "symbol": "MNQ.c.0",
+    "rows": 1758746,
+    "start_ts_utc": "2021-01-03T23:00:00+00:00",
+    "end_ts_utc": "2025-12-31T21:59:00+00:00",
+    "duplicate_timestamps": 0,
+    "out_of_order_timestamps": 0,
+    "missing_bars_small_gaps": 62239,
+    "large_gap_segments": 301,
+    "max_gap_minutes": 4381,
+    "missing_required_columns": [
+      "contract"
+    ],
+    "alignment_3m_ok": true,
+    "alignment_15m_ok": true,
+    "alignment_1h_ok": true,
+    "passed": false,
+    "errors": [
+      "Missing required columns: ['contract']",
+      "Missing bars in small gaps 62239 > 0 (ignores gaps larger than 120 minutes)"
+    ]
+  },
+  {
+    "file": "MYM_c_0_ohlcv-1m_2021-01-01T00-00-00_2026-01-01T00-00-00.parquet",
+    "symbol": "MYM.c.0",
+    "rows": 1699952,
+    "start_ts_utc": "2021-01-03T23:00:00+00:00",
+    "end_ts_utc": "2025-12-31T21:59:00+00:00",
+    "duplicate_timestamps": 0,
+    "out_of_order_timestamps": 0,
+    "missing_bars_small_gaps": 121031,
+    "large_gap_segments": 301,
+    "max_gap_minutes": 4381,
+    "missing_required_columns": [
+      "contract"
+    ],
+    "alignment_3m_ok": true,
+    "alignment_15m_ok": true,
+    "alignment_1h_ok": true,
+    "passed": false,
+    "errors": [
+      "Missing required columns: ['contract']",
+      "Missing bars in small gaps 121031 > 0 (ignores gaps larger than 120 minutes)"
+    ]
+  }
+]

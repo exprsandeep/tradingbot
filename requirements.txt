@@ -4,3 +4,4 @@ pyarrow
 python-dotenv
 PyYAML
 plotly
+streamlit

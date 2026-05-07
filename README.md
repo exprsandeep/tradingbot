@@ -74,3 +74,14 @@ Outputs:
 Generate an interactive chart for a specific trade index:
 
 `python scripts/visualize_backtest.py --symbol-prefix MNQ_c_0 --features-dir data/features --trades-csv reports/backtests/mnq_v1_trades.csv --trade-index 0 --window-hours 18 --out-html reports/backtests/visualizations/trade_0.html`
+
+## Interactive trade explorer app
+
+Launch an interactive app where you can scroll charts and jump to old trades/dates:
+
+`streamlit run apps/trade_explorer.py`
+
+In the app you can:
+- Jump directly to a historical trade from the backtest ledger
+- Jump to any old UTC date/time manually
+- Pan/zoom across synchronized `1h`, `15m`, and `3m` charts
