@@ -1,0 +1,83 @@
+version: 1
+name: mnq_structure_pullback_v1
+status: draft_frozen_for_backtest
+
+market:
+  symbol: MNQ.c.0
+  timezone: UTC
+  entry_timeframe: 3min
+  structure_timeframes:
+    - 15min
+    - 1h
+
+sessions:
+  allowed_utc:
+    - start: "13:30"
+      end: "20:00"
+  skip_days: []
+
+structure_logic:
+  trend_filter:
+    timeframe: 1h
+    long_if:
+      - close_above_sma_50: true
+      - momentum_20_gt: 0
+    short_if:
+      - close_below_sma_50: true
+      - momentum_20_lt: 0
+  pullback_context:
+    timeframe: 15min
+    long_zone:
+      position_in_20_range_max: 0.40
+    short_zone:
+      position_in_20_range_min: 0.60
+
+entry_logic:
+  timeframe: 3min
+  long_entry:
+    - structure_bias: long
+    - close_gt_prev_bar_high: true
+  short_entry:
+    - structure_bias: short
+    - close_lt_prev_bar_low: true
+  min_volume_filter:
+    enabled: true
+    volume_gt_rolling_20_mean: true
+
+risk_management:
+  tick_size: 0.25
+  stop_loss:
+    mode: fixed_ticks
+    ticks: 24
+  take_profit:
+    mode: fixed_ticks
+    ticks: 36
+  breakeven:
+    enabled: true
+    trigger_ticks: 16
+  time_stop:
+    enabled: true
+    bars_on_entry_tf: 20
+
+position_sizing:
+  contracts: 1
+  max_open_positions: 1
+  max_trades_per_day: 6
+  cooldown_bars_after_exit: 3
+
+costs:
+  commission_per_side_per_contract_usd: 1.5
+  fees_per_round_turn_per_contract_usd: 1.5
+  slippage_ticks:
+    rth: 1
+    eth: 2
+
+apex_constraints:
+  enforce_in_backtest: true
+  trailing_drawdown_mode: placeholder_configure_account
+  daily_loss_limit_usd: null
+  hard_stop_on_breach: true
+
+outputs:
+  trades_csv: reports/backtests/mnq_v1_trades.csv
+  summary_json: reports/backtests/mnq_v1_summary.json
