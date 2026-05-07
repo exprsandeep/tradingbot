@@ -6,6 +6,8 @@ from typing import Any
 
 import pandas as pd
 
+from .strategies import get_strategy
+
 
 @dataclass
 class Position:
@@ -56,6 +58,8 @@ def _to_usd(ticks: float, tick_value: float, qty: int) -> float:
 def run_backtest(strategy_cfg: dict[str, Any], features_dir: str) -> tuple[pd.DataFrame, dict[str, Any]]:
     features_root = Path(features_dir)
     symbol_prefix = strategy_cfg["market"]["symbol"].replace(".", "_")
+
+    strategy = get_strategy(strategy_cfg)
 
     entry_tf = strategy_cfg["market"]["entry_timeframe"]
     tf_15 = "15min"
@@ -197,17 +201,8 @@ def run_backtest(strategy_cfg: dict[str, Any], features_dir: str) -> tuple[pd.Da
         if daily_loss_limit is not None and day_realized[day_key] <= -abs(float(daily_loss_limit)):
             continue
 
-        trend_long = bool(row["h1_close"] > row["h1_close_sma_50"] and row["h1_momentum_20"] > 0)
-        trend_short = bool(row["h1_close"] < row["h1_close_sma_50"] and row["h1_momentum_20"] < 0)
-        pullback_long = bool(row["s15_pos20"] <= 0.40)
-        pullback_short = bool(row["s15_pos20"] >= 0.60)
-        vol_ok = bool(
-            not strategy_cfg["entry_logic"]["min_volume_filter"]["enabled"]
-            or row["volume"] > row["vol_sma_20"]
-        )
-
         slip = _slippage_ticks(ts, strategy_cfg) * tick_size
-        if trend_long and pullback_long and vol_ok and row["close"] > prev["high"]:
+        if strategy.should_enter_long(row, prev):
             entry_fill = float(row["close"] + slip)
             pos = Position(
                 side="long",
@@ -218,7 +213,7 @@ def run_backtest(strategy_cfg: dict[str, Any], features_dir: str) -> tuple[pd.Da
                 qty=qty,
             )
             day_trade_count[day_key] += 1
-        elif trend_short and pullback_short and vol_ok and row["close"] < prev["low"]:
+        elif strategy.should_enter_short(row, prev):
             entry_fill = float(row["close"] - slip)
             pos = Position(
                 side="short",
