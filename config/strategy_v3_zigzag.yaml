@@ -5,10 +5,10 @@ status: draft_frozen_for_backtest
 market:
   symbol: MNQ.c.0
   timezone: UTC
-  entry_timeframe: 3min
+  entry_timeframe: 1min
   structure_timeframes:
+    - 5min
     - 15min
-    - 1h
 
 sessions:
   allowed_utc:

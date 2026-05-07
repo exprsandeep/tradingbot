@@ -20,42 +20,48 @@ def load_feature(features_root: Path, symbol_prefix: str, timeframe: str) -> pd.
     return df.sort_index()
 
 
-def build_chart(df_1h: pd.DataFrame, df_15m: pd.DataFrame, df_3m: pd.DataFrame, entry_ts: pd.Timestamp | None, exit_ts: pd.Timestamp | None) -> go.Figure:
+def build_chart(df_macro: pd.DataFrame, df_intermediate: pd.DataFrame, df_entry: pd.DataFrame, entry_ts: pd.Timestamp | None, exit_ts: pd.Timestamp | None, zigzag_points: pd.Series | None = None) -> go.Figure:
     fig = make_subplots(
         rows=3,
         cols=1,
         shared_xaxes=True,
         vertical_spacing=0.03,
         row_heights=[0.30, 0.30, 0.40],
-        subplot_titles=("1h Structure", "15m Structure", "3m Execution"),
+        subplot_titles=("Macro Structure", "Intermediate Structure", "Entry Execution"),
     )
 
     fig.add_trace(
-        go.Candlestick(x=df_1h.index, open=df_1h["open"], high=df_1h["high"], low=df_1h["low"], close=df_1h["close"], name="1h"),
+        go.Candlestick(x=df_macro.index, open=df_macro["open"], high=df_macro["high"], low=df_macro["low"], close=df_macro["close"], name="Macro"),
         row=1,
         col=1,
     )
-    if "close_sma_50" in df_1h.columns:
+    if "close_sma_50" in df_macro.columns:
         fig.add_trace(
-            go.Scatter(x=df_1h.index, y=df_1h["close_sma_50"], mode="lines", name="1h SMA50", line=dict(width=1.5)),
+            go.Scatter(x=df_macro.index, y=df_macro["close_sma_50"], mode="lines", name="Macro SMA50", line=dict(width=1.5)),
+            row=1,
+            col=1,
+        )
+    if zigzag_points is not None and not zigzag_points.empty:
+        fig.add_trace(
+            go.Scatter(x=zigzag_points.index, y=zigzag_points.values, mode="lines+markers", name="Macro ZigZag", line=dict(color="magenta", width=2), marker=dict(size=6, color="magenta")),
             row=1,
             col=1,
         )
 
     fig.add_trace(
-        go.Candlestick(x=df_15m.index, open=df_15m["open"], high=df_15m["high"], low=df_15m["low"], close=df_15m["close"], name="15m"),
+        go.Candlestick(x=df_intermediate.index, open=df_intermediate["open"], high=df_intermediate["high"], low=df_intermediate["low"], close=df_intermediate["close"], name="Intermediate"),
         row=2,
         col=1,
     )
-    if "position_in_20_range" in df_15m.columns:
+    if "position_in_20_range" in df_intermediate.columns:
         fig.add_trace(
-            go.Scatter(x=df_15m.index, y=df_15m["position_in_20_range"], mode="lines", name="15m pos20", line=dict(width=1)),
+            go.Scatter(x=df_intermediate.index, y=df_intermediate["position_in_20_range"], mode="lines", name="Int pos20", line=dict(width=1)),
             row=2,
             col=1,
         )
 
     fig.add_trace(
-        go.Candlestick(x=df_3m.index, open=df_3m["open"], high=df_3m["high"], low=df_3m["low"], close=df_3m["close"], name="3m"),
+        go.Candlestick(x=df_entry.index, open=df_entry["open"], high=df_entry["high"], low=df_entry["low"], close=df_entry["close"], name="Entry"),
         row=3,
         col=1,
     )
@@ -86,12 +92,16 @@ def main() -> None:
     features_root = Path(st.sidebar.text_input("Features directory", str(default_root)))
     window_hours = st.sidebar.slider("Window +/- hours", min_value=2, max_value=72, value=18, step=2)
 
-    symbol_options = sorted([p.name for p in (features_root / "3min").glob("*.parquet")]) if (features_root / "3min").exists() else []
+    symbol_options = sorted([p.name for p in (features_root / "1min").glob("*.parquet")]) if (features_root / "1min").exists() else []
     symbol_prefixes = sorted({"_".join(name.split("_")[:3]) for name in symbol_options})
     if not symbol_prefixes:
         st.error("No feature files found. Build features first in data/features.")
         return
     symbol_prefix = st.sidebar.selectbox("Symbol", symbol_prefixes, index=0)
+
+    tf_entry = st.sidebar.selectbox("Entry Timeframe", ["1min", "3min", "5min"], index=0)
+    tf_intermediate = st.sidebar.selectbox("Intermediate Timeframe", ["3min", "5min", "15min"], index=1)
+    tf_macro = st.sidebar.selectbox("Macro Timeframe", ["15min", "1h", "4h"], index=0)
 
     mode = st.sidebar.radio("Navigation mode", ["Jump to trade", "Jump to date/time"])
 
@@ -130,22 +140,30 @@ def main() -> None:
     start = center_ts - timedelta(hours=window_hours)
     end = center_ts + timedelta(hours=window_hours)
 
-    df_1h = load_feature(features_root, symbol_prefix, "1h").loc[start:end]
-    df_15m = load_feature(features_root, symbol_prefix, "15min").loc[start:end]
-    df_3m = load_feature(features_root, symbol_prefix, "3min").loc[start:end]
+    df_macro_full = load_feature(features_root, symbol_prefix, tf_macro)
+    df_macro = df_macro_full.loc[start:end]
+    df_intermediate = load_feature(features_root, symbol_prefix, tf_intermediate).loc[start:end]
+    df_entry = load_feature(features_root, symbol_prefix, tf_entry).loc[start:end]
 
-    if df_3m.empty:
+    zigzag_points = None
+    if "swing_high_val" in df_macro_full.columns:
+        ph = df_macro_full["swing_high_val"].shift(-2).dropna()
+        pl = df_macro_full["swing_low_val"].shift(-2).dropna()
+        zz = pd.concat([ph, pl]).sort_index()
+        zigzag_points = zz.loc[start:end]
+
+    if df_entry.empty:
         st.warning("No data in selected window. Expand window or choose another date/trade.")
         return
 
-    fig = build_chart(df_1h, df_15m, df_3m, entry_ts, exit_ts)
+    fig = build_chart(df_macro, df_intermediate, df_entry, entry_ts, exit_ts, zigzag_points)
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Window stats")
     c1, c2, c3 = st.columns(3)
-    c1.metric("3m bars", len(df_3m))
-    c2.metric("15m bars", len(df_15m))
-    c3.metric("1h bars", len(df_1h))
+    c1.metric(f"{tf_entry} bars", len(df_entry))
+    c2.metric(f"{tf_intermediate} bars", len(df_intermediate))
+    c3.metric(f"{tf_macro} bars", len(df_macro))
 
 
 if __name__ == "__main__":

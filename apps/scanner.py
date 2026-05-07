@@ -58,11 +58,11 @@ def build_synthetic_row(df_3m: pd.DataFrame, df_15m: pd.DataFrame, df_1h: pd.Dat
         "volume": curr_3m["volume"],
         "vol_sma_20": curr_3m["vol_sma_20"],
         "body_pct_of_range": curr_3m.get("body_pct_of_range", 0.0),
-        "s15_pos20": curr_15m["position_in_20_range"],
-        "h1_close": curr_1h["close"],
-        "h1_close_sma_50": curr_1h["close_sma_50"],
-        "h1_momentum_20": curr_1h["momentum_20"],
-        "h1_zigzag_trend": curr_1h.get("zigzag_trend", 0),
+        "intermediate_pos20": curr_15m["position_in_20_range"],
+        "macro_close": curr_1h["close"],
+        "macro_close_sma_50": curr_1h["close_sma_50"],
+        "macro_momentum_20": curr_1h["momentum_20"],
+        "macro_zigzag_trend": curr_1h.get("zigzag_trend", 0),
     }
     
     return pd.Series(row_data), prev_3m
@@ -87,15 +87,20 @@ def main() -> None:
         return
 
     # Discover available symbols
-    symbol_options = sorted([p.name for p in (features_root / "3min").glob("*.parquet")]) if (features_root / "3min").exists() else []
+    symbol_options = sorted([p.name for p in (features_root / "1min").glob("*.parquet")]) if (features_root / "1min").exists() else []
     symbol_prefixes = sorted({"_".join(name.split("_")[:3]) for name in symbol_options})
 
     if not symbol_prefixes:
-        st.warning("No symbols found in data/features/3min.")
+        st.warning("No symbols found in data/features/1min.")
         return
 
     # Sidebar controls
     st.sidebar.header("Scanner Settings")
+    
+    tf_entry = st.sidebar.selectbox("Entry Timeframe", ["1min", "3min", "5min"], index=0)
+    tf_intermediate = st.sidebar.selectbox("Intermediate Timeframe", ["3min", "5min", "15min"], index=1)
+    tf_macro = st.sidebar.selectbox("Macro Timeframe", ["15min", "1h", "4h"], index=0)
+    
     date_val = st.sidebar.date_input("Date (UTC)", value=datetime(2025, 1, 15).date())
     time_val = st.sidebar.time_input("Time (UTC)", value=time(14, 30))
     scan_ts = pd.Timestamp(datetime.combine(date_val, time_val)).tz_localize("UTC")
@@ -129,9 +134,9 @@ def main() -> None:
     # Build Scan Results
     results = []
     for sym in symbol_prefixes:
-        df_3m = load_feature_up_to(features_root, sym, "3min", scan_ts)
-        df_15m = load_feature_up_to(features_root, sym, "15min", scan_ts)
-        df_1h = load_feature_up_to(features_root, sym, "1h", scan_ts)
+        df_3m = load_feature_up_to(features_root, sym, tf_entry, scan_ts)
+        df_15m = load_feature_up_to(features_root, sym, tf_intermediate, scan_ts)
+        df_1h = load_feature_up_to(features_root, sym, tf_macro, scan_ts)
 
         row, prev = build_synthetic_row(df_3m, df_15m, df_1h)
         if row is None or prev is None:
@@ -170,13 +175,13 @@ def main() -> None:
 
         # Determine Trend context for display
         trend = "NEUTRAL"
-        if row.get("h1_zigzag_trend", 0) == 1:
+        if row.get("macro_zigzag_trend", 0) == 1:
             trend = "ZZ UPTREND"
-        elif row.get("h1_zigzag_trend", 0) == -1:
+        elif row.get("macro_zigzag_trend", 0) == -1:
             trend = "ZZ DOWNTREND"
-        elif row["h1_close"] > row["h1_close_sma_50"] and row["h1_momentum_20"] > 0:
+        elif row["macro_close"] > row["macro_close_sma_50"] and row["macro_momentum_20"] > 0:
             trend = "BULLISH"
-        elif row["h1_close"] < row["h1_close_sma_50"] and row["h1_momentum_20"] < 0:
+        elif row["macro_close"] < row["macro_close_sma_50"] and row["macro_momentum_20"] < 0:
             trend = "BEARISH"
 
         results.append({

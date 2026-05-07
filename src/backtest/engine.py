@@ -62,31 +62,31 @@ def run_backtest(strategy_cfg: dict[str, Any], features_dir: str) -> tuple[pd.Da
     strategy = get_strategy(strategy_cfg)
 
     entry_tf = strategy_cfg["market"]["entry_timeframe"]
-    tf_15 = "15min"
-    tf_1h = "1h"
+    tf_intermediate = strategy_cfg["market"]["structure_timeframes"][0]
+    tf_macro = strategy_cfg["market"]["structure_timeframes"][1]
 
     entry = _load_tf(features_root, entry_tf, symbol_prefix)
-    s15 = _load_tf(features_root, tf_15, symbol_prefix)
-    s1h = _load_tf(features_root, tf_1h, symbol_prefix)
+    s_int = _load_tf(features_root, tf_intermediate, symbol_prefix)
+    s_mac = _load_tf(features_root, tf_macro, symbol_prefix)
 
     # As-of joins prevent lookahead by joining only the latest completed HTF bar.
     df = pd.merge_asof(
         entry.reset_index(drop=True).sort_values("ts"),
-        s15.reset_index(drop=True).sort_values("ts")[["ts", "position_in_20_range"]].rename(
-            columns={"position_in_20_range": "s15_pos20"}
+        s_int.reset_index(drop=True).sort_values("ts")[["ts", "position_in_20_range"]].rename(
+            columns={"position_in_20_range": "intermediate_pos20"}
         ),
         on="ts",
         direction="backward",
     )
     df = pd.merge_asof(
         df.sort_values("ts"),
-        s1h[["ts", "close", "close_sma_50", "momentum_20", "zigzag_trend"]]
+        s_mac[["ts", "close", "close_sma_50", "momentum_20", "zigzag_trend"]]
         .rename(
             columns={
-                "close": "h1_close",
-                "close_sma_50": "h1_close_sma_50",
-                "momentum_20": "h1_momentum_20",
-                "zigzag_trend": "h1_zigzag_trend",
+                "close": "macro_close",
+                "close_sma_50": "macro_close_sma_50",
+                "momentum_20": "macro_momentum_20",
+                "zigzag_trend": "macro_zigzag_trend",
             }
         )
         .reset_index(drop=True)

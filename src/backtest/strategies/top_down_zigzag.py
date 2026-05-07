@@ -12,25 +12,25 @@ class TopDownZigZagStrategy(BaseStrategy):
 
     def should_enter_long(self, row: pd.Series, prev: pd.Series) -> bool:
         # Top-down trend filter (1 = Uptrend)
-        if row.get("h1_zigzag_trend", 0) != 1:
+        if row.get("macro_zigzag_trend", 0) != 1:
             return False
             
-        # 15m pullback filter (only buy dips)
-        if row.get("s15_pos20", 1.0) > 0.40:
+        # Pullback filter (only buy dips)
+        if row.get("intermediate_pos20", 1.0) > 0.40:
             return False
             
-        # Entry trigger: 3m closes higher than previous high
+        # Entry trigger: close higher than previous high
         trigger = row["close"] > prev["high"]
         
         return trigger and self._vol_ok(row)
 
     def should_enter_short(self, row: pd.Series, prev: pd.Series) -> bool:
         # Top-down trend filter (-1 = Downtrend)
-        if row.get("h1_zigzag_trend", 0) != -1:
+        if row.get("macro_zigzag_trend", 0) != -1:
             return False
             
-        # 15m pullback filter (only sell rips)
-        if row.get("s15_pos20", 0.0) < 0.60:
+        # Pullback filter (only sell rips)
+        if row.get("intermediate_pos20", 0.0) < 0.60:
             return False
             
         # Entry trigger: 3m closes lower than previous low

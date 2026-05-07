@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--timeframes",
         nargs="+",
-        default=["3min", "15min", "1h"],
+        default=["1min", "3min", "5min", "15min", "1h"],
         help="Pandas resample rules",
     )
     parser.add_argument("--out-dir", default="data/features", help="Output features dir")
